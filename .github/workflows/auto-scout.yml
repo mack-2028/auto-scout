@@ -1,0 +1,45 @@
+# SUBFOLDER VERSION: use this when your files are inside a folder called auto-scout in the repo.
+# Put this file in your repo at:  .github/workflows/auto-scout.yml
+# Then open the repo's "Actions" tab, click "Auto Scout", click "Run workflow".
+name: Auto Scout
+
+on:
+  workflow_dispatch:
+
+jobs:
+  scout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    defaults:
+      run:
+        working-directory: auto-scout
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Install the Python parts (CPU only, no graphics card needed)
+        run: |
+          pip install --upgrade pip
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install opencv-python-headless "yt-dlp[default]" ultralytics
+
+      - name: Save YouTube cookies (only if you added the secret)
+        env:
+          YT_COOKIES: ${{ secrets.YT_COOKIES }}
+        run: |
+          if [ -n "$YT_COOKIES" ]; then printf '%s' "$YT_COOKIES" > cookies.txt; fi
+
+      - name: Watch the matches
+        run: python auto_scout.py config.json
+
+      - name: Keep a copy of the results
+        uses: actions/upload-artifact@v4
+        with:
+          name: results
+          path: auto-scout/results.json
