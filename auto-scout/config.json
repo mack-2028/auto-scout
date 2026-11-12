@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Auto Scout setup</title>
+<style>
+  body{font:17px/1.5 system-ui,Segoe UI,sans-serif;margin:0;background:#4B9CD3;color:#000;padding:16px}
+  .card{background:#fff;border-radius:12px;padding:18px;max-width:1000px;margin:0 auto 16px}
+  h1{margin:0 0 6px;font-size:1.6rem}
+  h2{margin:0 0 8px;font-size:1.25rem}
+  .num{display:inline-block;background:#0f7b6c;color:#fff;border-radius:50%;width:30px;height:30px;text-align:center;line-height:30px;margin-right:8px;font-weight:800}
+  label{display:block;font-weight:700;margin:12px 0 4px}
+  input[type=text],textarea,select{width:100%;box-sizing:border-box;font:16px system-ui;padding:10px 12px;border-radius:8px;border:2px solid #000;background:#fff;color:#000}
+  textarea{font-family:Consolas,monospace;font-size:14px}
+  button{font:700 15px system-ui;padding:9px 14px;border-radius:8px;border:2px solid #000;background:#fff;color:#000;cursor:pointer;margin:6px 6px 0 0}
+  button.go{background:#0f7b6c;color:#fff;border-color:#0f7b6c}
+  button.on{outline:4px solid #f2b705}
+  .hint{font-size:.92rem;margin:4px 0}
+  .row{display:flex;gap:12px;flex-wrap:wrap}.row>div{flex:1 1 220px}
+  canvas{max-width:100%;border:2px solid #000;border-radius:8px;cursor:crosshair;touch-action:none;display:block;margin-top:8px}
+  .ok{color:#0a6b2d;font-weight:700}.bad{color:#b00020;font-weight:700}
+  a.btn{display:inline-block;text-decoration:none;font:700 15px system-ui;padding:9px 14px;border-radius:8px;background:#0f7b6c;color:#fff;margin:6px 6px 0 0}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>Auto Scout setup</h1>
+  <p class="hint">Fill in the 5 boxes below, top to bottom. At the end you get two ready-made files for GitHub. Nothing here is sent anywhere. Your answers are remembered on this computer.</p>
+</div>
+
+<div class="card">
+  <h2><span class="num">1</span>Which game and which video?</h2>
+  <div class="row">
+    <div><label for="game">Game</label>
+      <select id="game"><option value="ftc">FTC (4 robots per match)</option><option value="frc">FRC (6 robots per match)</option></select></div>
+    <div><label for="video">YouTube link of the stream</label>
+      <input type="text" id="video" placeholder="https://www.youtube.com/watch?v=..."></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2><span class="num">2</span>Which teams do you care about?</h2>
+  <label for="teams">Team numbers (separate with commas or put one on each line)</label>
+  <textarea id="teams" rows="2" placeholder="14623, 254, 9999"></textarea>
+  <p class="hint">Matches that don't include any of these teams are skipped, so it only watches what you need.</p>
+</div>
+
+<div class="card">
+  <h2><span class="num">3</span>When is each match in the video?</h2>
+  <p class="hint">Copy the match times from the video description or comments. One match per line: <b>time, match name, then the team numbers (red teams first, then blue teams)</b>.<br>Example: <b>1:23:45 Q12 14623 254 9999 111</b></p>
+  <textarea id="matches" rows="8" placeholder="0:12:30 Q1 14623 254 9999 111&#10;1:23:45 Q12 14623 6012 7777 8888"></textarea>
+  <p class="hint" id="matchCheck"></p>
+</div>
+
+<div class="card">
+  <h2><span class="num">4</span>Show it where things are on the screen</h2>
+  <p class="hint">Pause the video just as a match starts (robots in their starting spots). Press <b>Windows key + Shift + S</b>, drag around the video picture, and save it. Then choose that picture here. Pick what you're drawing, then drag a box on the picture.</p>
+  <input type="file" id="file" accept="image/*">
+  <div id="btns"></div>
+  <button id="undo">Undo last box</button><button id="clear">Clear boxes</button>
+  <canvas id="c" width="960" height="540"></canvas>
+</div>
+
+<div class="card">
+  <h2><span class="num">5</span>Last few choices</h2>
+  <div class="row">
+    <div><label><input type="checkbox" id="upload" checked> Send the numbers to my website automatically</label></div>
+    <div><label><input type="checkbox" id="cookies"> YouTube is blocking GitHub (I added the YT_COOKIES secret)</label></div>
+  </div>
+  <label for="repo">Your GitHub repo (already filled in)</label>
+  <input type="text" id="repo" value="mack-2028/auto-scout">
+  <label for="folder">Folder in the repo where auto_scout.py is</label>
+  <input type="text" id="folder" value="auto-scout">
+</div>
+
+<div class="card">
+  <h2>Your two files</h2>
+  <p class="hint">Press the green buttons. GitHub opens with the file already filled in. Just click <b>Commit changes</b>, then <b>Commit changes</b> again. (If a green button does nothing, use Copy or Download.)</p>
+  <h2 style="font-size:1.05rem;margin-top:14px">config.json</h2>
+  <textarea id="outCfg" rows="12" readonly></textarea>
+  <a class="btn" id="ghCfg" target="_blank" rel="noopener">Create config.json on GitHub</a>
+  <button id="cpCfg">Copy</button><button id="dlCfg">Download</button>
+  <h2 style="font-size:1.05rem;margin-top:18px">chapters.txt</h2>
+  <textarea id="outChap" rows="6" readonly></textarea>
+  <a class="btn" id="ghChap" target="_blank" rel="noopener">Create chapters.txt on GitHub</a>
+  <button id="cpChap">Copy</button><button id="dlChap">Download</button>
+  <p id="msg" class="hint"></p>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const cv = $("c"), ctx = cv.getContext("2d");
+let img = null, boxes = {}, current = "", goalCount = 0, drag = null;
+
+/* ---------- remember answers on this computer (never required) ---------- */
+const KEY = "autoScoutSetup";
+function saveState(){
+  try{ localStorage.setItem(KEY, JSON.stringify({game:$("game").value, video:$("video").value, teams:$("teams").value, matches:$("matches").value, upload:$("upload").checked, cookies:$("cookies").checked, repo:$("repo").value, folder:$("folder").value, boxes, goalCount})); }catch(e){}
+}
+function loadState(){
+  try{
+    const s = JSON.parse(localStorage.getItem(KEY)||"null"); if(!s) return;
+    $("game").value = s.game||"ftc"; $("video").value = s.video||""; $("teams").value = s.teams||""; $("matches").value = s.matches||"";
+    $("upload").checked = s.upload!==false; $("cookies").checked = !!s.cookies; $("repo").value = s.repo||"mack-2028/auto-scout"; $("folder").value = s.folder||"auto-scout";
+    boxes = s.boxes||{}; goalCount = s.goalCount||0;
+  }catch(e){}
+}
+
+/* ---------- the picture and boxes ---------- */
+function names(){ return $("game").value==="frc" ? ["Red 1","Red 2","Red 3","Blue 1","Blue 2","Blue 3"] : ["Red 1","Red 2","Blue 1","Blue 2"]; }
+function buildButtons(){
+  const b = $("btns"); b.innerHTML = "";
+  names().forEach(nm=>{ const x = document.createElement("button"); x.textContent = "Start: "+nm; x.dataset.k = "start:"+nm; b.appendChild(x); });
+  const g = document.createElement("button"); g.textContent = "+ Goal box"; g.dataset.k = "goal"; g.className = "go"; b.appendChild(g);
+  const p = document.createElement("button"); p.textContent = "Park box"; p.dataset.k = "park"; p.className = "go"; b.appendChild(p);
+  current = "";
+}
+function colorFor(k){ return k.startsWith("start:") ? (k.includes("Red") ? "#e53935" : "#1e63d6") : k.startsWith("goal") ? "#f2b705" : "#2ecc71"; }
+function redraw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  if(img) ctx.drawImage(img,0,0,cv.width,cv.height); else { ctx.fillStyle="#222"; ctx.fillRect(0,0,cv.width,cv.height); ctx.fillStyle="#fff"; ctx.font="22px sans-serif"; ctx.fillText("Choose your screenshot above first", 280, 270); }
+  Object.entries(boxes).forEach(([k,r])=>{
+    const [x1,y1,x2,y2] = r, col = colorFor(k);
+    ctx.lineWidth = 3; ctx.strokeStyle = col; ctx.strokeRect(x1*cv.width, y1*cv.height, (x2-x1)*cv.width, (y2-y1)*cv.height);
+    ctx.fillStyle = col; ctx.font = "bold 16px sans-serif"; ctx.fillText(k.replace("start:",""), x1*cv.width+4, y1*cv.height+18);
+  });
+  if(drag){ ctx.strokeStyle = "#fff"; ctx.setLineDash([6,4]); ctx.strokeRect(drag.x1, drag.y1, drag.x2-drag.x1, drag.y2-drag.y1); ctx.setLineDash([]); }
+}
+function pos(e){ const r = cv.getBoundingClientRect(); return {x:(e.clientX-r.left)*cv.width/r.width, y:(e.clientY-r.top)*cv.height/r.height}; }
+cv.addEventListener("pointerdown", e=>{ if(!current){ $("msg").textContent = "Pick what to draw first (the buttons above the picture)."; return; } cv.setPointerCapture(e.pointerId); const p = pos(e); drag = {x1:p.x,y1:p.y,x2:p.x,y2:p.y}; });
+cv.addEventListener("pointermove", e=>{ if(!drag) return; const p = pos(e); drag.x2 = p.x; drag.y2 = p.y; redraw(); });
+cv.addEventListener("pointerup", ()=>{
+  if(!drag) return;
+  const x1 = Math.min(drag.x1,drag.x2)/cv.width, x2 = Math.max(drag.x1,drag.x2)/cv.width, y1 = Math.min(drag.y1,drag.y2)/cv.height, y2 = Math.max(drag.y1,drag.y2)/cv.height;
+  drag = null;
+  if(x2-x1 > 0.005 && y2-y1 > 0.005){
+    let key = current; if(current==="goal"){ goalCount++; key = "goal"+goalCount; }
+    boxes[key] = [x1,y1,x2,y2]; $("msg").textContent = "";
+  }
+  redraw(); update();
+});
+$("btns").addEventListener("click", e=>{ const b = e.target.closest("button"); if(!b) return; current = b.dataset.k; [...$("btns").children].forEach(x=>x.classList.toggle("on", x===b)); });
+$("undo").addEventListener("click", ()=>{ const ks = Object.keys(boxes); if(ks.length){ const k = ks[ks.length-1]; if(k.startsWith("goal")) goalCount = Math.max(0, goalCount-1); delete boxes[k]; redraw(); update(); } });
+$("clear").addEventListener("click", ()=>{ boxes = {}; goalCount = 0; redraw(); update(); });
+$("file").addEventListener("change", e=>{ const f = e.target.files[0]; if(!f) return; const im = new Image(); im.onload = ()=>{ img = im; cv.height = Math.round(cv.width*im.height/im.width); redraw(); }; im.src = URL.createObjectURL(f); });
+
+/* ---------- build the two files ---------- */
+function r3(v){ return Math.round(v*1000)/1000; }
+function parseMatches(){
+  const lines = $("matches").value.split(/\r?\n/).filter(l=>l.trim());
+  let good = 0; const bad = [];
+  lines.forEach((l,i)=>{ if(/^\s*(?:\d{1,2}:)?\d{1,3}:\d{2}\b/.test(l)) good++; else bad.push(i+1); });
+  return {lines, good, bad};
+}
+function update(){
+  const game = $("game").value;
+  const frc = game==="frc";
+  const teams = $("teams").value.split(/[\s,;]+/).map(x=>x.replace(/\D/g,"")).filter((x,i,a)=>x && a.indexOf(x)===i);
+  const starts = names().map(nm => boxes["start:"+nm] ? boxes["start:"+nm].map(r3) : [0,0,0,0]);
+  const goals = Object.keys(boxes).filter(k=>k.startsWith("goal")).map(k=>boxes[k].map(r3));
+  const park = boxes.park ? boxes.park.map(r3) : null;
+  const cfg = {
+    game, detector:"yolo", model:"best.pt", video:$("video").value.trim(),
+    chapters_file:"chapters.txt", match_seconds:180, followed_teams:teams,
+    sample_fps:5, imgsz:320, auto_seconds: frc?15:30, transition_seconds: frc?3:8, lead_in:0,
+    start_zones:starts, goal_zones:goals, park_zone:park,
+    output:"results.json", upload:$("upload").checked,
+    firebase:{projectId:"evilleempire-scouting", apiKey:"AIzaSyD89JSCdkO3TOYiTxilAzZdEltlVYsKjKY"}
+  };
+  if($("cookies").checked) cfg.cookies = "cookies.txt";
+  $("outCfg").value = JSON.stringify(cfg, null, 2);
+  const m = parseMatches();
+  $("outChap").value = m.lines.join("\n");
+  $("matchCheck").innerHTML = m.lines.length ? (`<span class="ok">${m.good} match line(s) look good.</span>` + (m.bad.length ? ` <span class="bad">Line(s) ${m.bad.join(", ")} don't start with a time like 1:23:45.</span>` : "")) : "";
+  const repo = $("repo").value.trim() || "mack-2028/auto-scout", folder = $("folder").value.trim().replace(/^\/|\/$/g,"");
+  const base = "https://github.com/"+repo+"/new/main"+(folder?"/"+folder:"");
+  $("ghCfg").href = base+"?filename=config.json&value="+encodeURIComponent($("outCfg").value);
+  $("ghChap").href = base+"?filename=chapters.txt&value="+encodeURIComponent($("outChap").value);
+  saveState();
+}
+async function copy(id){ try{ await navigator.clipboard.writeText($(id).value); $("msg").textContent = "Copied!"; }catch(e){ $(id).select(); $("msg").textContent = "Press Ctrl+C to copy."; } }
+function download(id, name){ const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([$(id).value],{type:"text/plain"})); a.download = name; a.click(); }
+$("cpCfg").onclick = ()=>copy("outCfg"); $("cpChap").onclick = ()=>copy("outChap");
+$("dlCfg").onclick = ()=>download("outCfg","config.json"); $("dlChap").onclick = ()=>download("outChap","chapters.txt");
+["game","video","teams","matches","upload","cookies","repo","folder"].forEach(id=>$(id).addEventListener("input", ()=>{ if(id==="game"){ boxes = {}; goalCount = 0; buildButtons(); redraw(); } update(); }));
+
+loadState(); buildButtons(); redraw(); update();
+</script>
+</body>
+</html>
