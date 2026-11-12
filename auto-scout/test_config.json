@@ -1,0 +1,17 @@
+{
+  "game": "ftc",
+  "detector": "color",
+  "video": "fake_match.mp4",
+  "followed_teams": ["14623"],
+  "sample_fps": 5,
+  "auto_seconds": 30,
+  "transition_seconds": 8,
+  "start_zones": [[0.0, 0.30, 0.30, 0.60], [0.0, 0.60, 0.30, 0.90]],
+  "goal_zones":  [[0.875, 0.27, 0.985, 0.72]],
+  "park_zone":   [0.60, 0.25, 0.90, 0.50],
+  "output": "test_results.json",
+  "matches": [
+    {"label": "Q1", "start": "0:00:00", "end": "0:00:59", "teams": ["14623", "9999"]},
+    {"label": "Q2", "start": "0:00:00", "end": "0:00:59", "teams": ["111", "222"]}
+  ]
+}

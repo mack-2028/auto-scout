@@ -1,0 +1,23 @@
+{
+  "game": "ftc",
+  "detector": "yolo",
+  "model": "best.pt",
+  "video": "https://www.youtube.com/watch?v=PUT_THE_LINK_HERE",
+  "chapters_file": "chapters.txt",
+  "match_seconds": 180,
+  "followed_teams": ["14623"],
+  "sample_fps": 5,
+  "imgsz": 320,
+  "auto_seconds": 30,
+  "transition_seconds": 8,
+  "lead_in": 0,
+  "start_zones": [],
+  "goal_zones": [],
+  "park_zone": null,
+  "output": "results.json",
+  "upload": false,
+  "firebase": {
+    "projectId": "evilleempire-scouting",
+    "apiKey": "AIzaSyD89JSCdkO3TOYiTxilAzZdEltlVYsKjKY"
+  }
+}
